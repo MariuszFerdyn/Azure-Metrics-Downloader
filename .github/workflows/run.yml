@@ -1,0 +1,33 @@
+name: Run Azure Metrics Downloader
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  download-and-run:
+    runs-on: windows-latest  # Using Windows runner since it's a .NET executable
+
+    steps:
+      - name: Download latest artifact
+        uses: actions/download-artifact@v4  # Official GitHub action
+        with:
+          name: build-artifacts.zip
+          path: ./artifacts
+          
+      - name: Extract artifact
+        run: |
+          Expand-Archive -Path ./artifacts/build-artifacts.zip -DestinationPath ./extracted
+        shell: pwsh
+        
+      - name: Set Azure credentials as environment variables
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          echo "Setting Azure credentials as environment variables..."
+          
+      - name: Run Azure Metrics Downloader
+        run: |
+          ./extracted/AzureMetricsDownloader/bin/Release/net8.0/AzureMetricsDownloader.exe
+        shell: pwsh
