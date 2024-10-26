@@ -2,10 +2,10 @@
   "profiles": {
     "AzureMetricsDownloader": {
       "commandName": "Project",
-      "environmentVariables": {
-        "AZURE_TENANT_ID": "xxx",
-        "AZURE_CLIENT_ID": "xxx",
-        "AZURE_CLIENT_SECRET": "xxx"
+      // "environmentVariables": {
+      //  "AZURE_TENANT_ID": "",
+      //  "AZURE_CLIENT_ID": "",
+      //  "AZURE_CLIENT_SECRET": ""
       }
     }
   }
