@@ -3,21 +3,21 @@ name: Dynamic Code Execution
 on:
   workflow_dispatch:
     inputs:
-      className:
-        description: 'Fully qualified class name to execute'
-        required: true
+      executeAll:
+        description: 'Execute all discovered methods'
+        type: boolean
+        default: true
+      specificClass:
+        description: 'Specific class to execute (optional)'
+        required: false
         type: string
-      methodName:
-        description: 'Method name to invoke'
-        required: true
-        type: string
-      parameters:
-        description: 'Method parameters (JSON format)'
+      specificMethod:
+        description: 'Specific method to execute (optional)'
         required: false
         type: string
 
 jobs:
-  build-and-run:
+  discover-and-execute:
     runs-on: windows-latest
     
     steps:
@@ -28,19 +28,17 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    # Tworzymy projekt wykonawczy
     - name: Create Runner Project
       run: |
-        mkdir DynamicCodeRunner
-        cd DynamicCodeRunner
+        mkdir CodeRunner
+        cd CodeRunner
         dotnet new console
         dotnet add package Microsoft.CodeAnalysis
         dotnet add package Microsoft.CodeAnalysis.CSharp
         dotnet add package Microsoft.CodeAnalysis.Workspaces.MSBuild
         dotnet add package Microsoft.Build.Locator
 
-    # Tworzymy plik Program.cs z loaderem
-    - name: Create Dynamic Code Runner
+    - name: Create Runner Program
       shell: pwsh
       run: |
         $code = @'
@@ -51,18 +49,91 @@ jobs:
         using System.Runtime.Loader;
         using System.Text.Json;
 
-        Microsoft.Build.Locator.MSBuildLocator.RegisterDefaults();
+        public class TypeInfo
+        {
+            public string FullName { get; set; }
+            public List<MethodInfo> Methods { get; set; }
+        }
 
-        public class DynamicCodeLoader
+        public class MethodInfo
+        {
+            public string Name { get; set; }
+            public List<ParameterInfo> Parameters { get; set; }
+        }
+
+        public class ParameterInfo
+        {
+            public string Name { get; set; }
+            public string Type { get; set; }
+        }
+
+        public class CodeRunner
         {
             private readonly string _solutionPath;
+            private Assembly _loadedAssembly;
 
-            public DynamicCodeLoader(string solutionPath)
+            public CodeRunner(string solutionPath)
             {
                 _solutionPath = solutionPath;
             }
 
-            public async Task<Assembly> LoadAndCompileAsync()
+            public async Task<List<TypeInfo>> DiscoverTypesAsync()
+            {
+                var workspace = MSBuildWorkspace.Create();
+                var solution = await workspace.OpenSolutionAsync(_solutionPath);
+                var discoveredTypes = new List<TypeInfo>();
+
+                foreach (var project in solution.Projects)
+                {
+                    var compilation = await project.GetCompilationAsync();
+                    if (compilation == null) continue;
+
+                    foreach (var syntaxTree in compilation.SyntaxTrees)
+                    {
+                        var semanticModel = compilation.GetSemanticModel(syntaxTree);
+                        var root = await syntaxTree.GetRootAsync();
+
+                        var classDeclarations = root
+                            .DescendantNodes()
+                            .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax>();
+
+                        foreach (var classDeclaration in classDeclarations)
+                        {
+                            var symbol = semanticModel.GetDeclaredSymbol(classDeclaration);
+                            if (symbol == null) continue;
+
+                            var methods = classDeclaration.Members
+                                .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>()
+                                .Select(method => 
+                                {
+                                    var methodSymbol = semanticModel.GetDeclaredSymbol(method);
+                                    return new MethodInfo
+                                    {
+                                        Name = method.Identifier.Text,
+                                        Parameters = method.ParameterList.Parameters
+                                            .Select(p => new ParameterInfo 
+                                            { 
+                                                Name = p.Identifier.Text,
+                                                Type = semanticModel.GetTypeInfo(p.Type).Type?.ToString() ?? "unknown"
+                                            })
+                                            .ToList()
+                                    };
+                                })
+                                .ToList();
+
+                            discoveredTypes.Add(new TypeInfo
+                            {
+                                FullName = symbol.ToDisplayString(),
+                                Methods = methods
+                            });
+                        }
+                    }
+                }
+
+                return discoveredTypes;
+            }
+
+            public async Task CompileAndLoadAsync()
             {
                 var workspace = MSBuildWorkspace.Create();
                 var solution = await workspace.OpenSolutionAsync(_solutionPath);
@@ -117,63 +188,139 @@ jobs:
 
                 ms.Seek(0, SeekOrigin.Begin);
                 var loadContext = new AssemblyLoadContext("DynamicAssembly", isCollectible: true);
-                return loadContext.LoadFromStream(ms);
+                _loadedAssembly = loadContext.LoadFromStream(ms);
             }
-        }
 
-        // Main program
-        async Task Main()
-        {
-            try
+            public async Task ExecuteMethodAsync(string typeName, string methodName)
             {
-                var solutionPath = args[0];
-                var className = args[1];
-                var methodName = args[2];
-                var parametersJson = args.Length > 3 ? args[3] : "[]";
+                if (_loadedAssembly == null)
+                {
+                    await CompileAndLoadAsync();
+                }
 
-                Console.WriteLine($"Loading solution: {solutionPath}");
-                Console.WriteLine($"Class: {className}");
-                Console.WriteLine($"Method: {methodName}");
-                Console.WriteLine($"Parameters: {parametersJson}");
-
-                var loader = new DynamicCodeLoader(solutionPath);
-                var assembly = await loader.LoadAndCompileAsync();
-
-                var type = assembly.GetType(className)
-                    ?? throw new ArgumentException($"Type {className} not found");
+                var type = _loadedAssembly.GetType(typeName)
+                    ?? throw new ArgumentException($"Type {typeName} not found");
 
                 var instance = Activator.CreateInstance(type)
-                    ?? throw new InvalidOperationException($"Could not create instance of {className}");
+                    ?? throw new InvalidOperationException($"Could not create instance of {typeName}");
 
                 var method = type.GetMethod(methodName)
                     ?? throw new ArgumentException($"Method {methodName} not found");
 
-                var parameters = JsonSerializer.Deserialize<object[]>(parametersJson);
-                var result = method.Invoke(instance, parameters);
+                try
+                {
+                    Console.WriteLine($"Executing {typeName}.{methodName}");
+                    
+                    // Create default parameters if needed
+                    var parameters = method.GetParameters()
+                        .Select(p => GetDefaultValue(p.ParameterType))
+                        .ToArray();
 
-                Console.WriteLine($"Execution result: {result}");
+                    var result = method.Invoke(instance, parameters);
+                    
+                    if (result is Task task)
+                    {
+                        await task;
+                        Console.WriteLine($"Async method {methodName} completed");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Method result: {result}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error executing {methodName}: {ex.Message}");
+                    throw;
+                }
             }
-            catch (Exception ex)
+
+            private object GetDefaultValue(Type type)
             {
-                Console.WriteLine($"Error: {ex.Message}");
-                Console.WriteLine(ex.StackTrace);
-                Environment.Exit(1);
+                if (type == typeof(string)) return "";
+                if (type == typeof(DateTime)) return DateTime.Now;
+                if (type == typeof(int)) return 0;
+                if (type == typeof(bool)) return false;
+                return null;
             }
         }
 
-        await Main();
+        public class Program
+        {
+            public static async Task Main(string[] args)
+            {
+                try
+                {
+                    Microsoft.Build.Locator.MSBuildLocator.RegisterDefaults();
+                    
+                    var solutionPath = args[0];
+                    var executeAll = args.Length > 1 && bool.Parse(args[1]);
+                    var specificClass = args.Length > 2 ? args[2] : null;
+                    var specificMethod = args.Length > 3 ? args[3] : null;
+
+                    Console.WriteLine($"Solution path: {solutionPath}");
+                    Console.WriteLine($"Execute all: {executeAll}");
+                    Console.WriteLine($"Specific class: {specificClass}");
+                    Console.WriteLine($"Specific method: {specificMethod}");
+
+                    var runner = new CodeRunner(solutionPath);
+                    var types = await runner.DiscoverTypesAsync();
+
+                    // Save discovery results
+                    var json = JsonSerializer.Serialize(types, new JsonSerializerOptions { WriteIndented = true });
+                    await File.WriteAllTextAsync("discovered-types.json", json);
+
+                    if (executeAll)
+                    {
+                        foreach (var type in types)
+                        {
+                            foreach (var method in type.Methods)
+                            {
+                                try
+                                {
+                                    await runner.ExecuteMethodAsync(type.FullName, method.Name);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Failed to execute {type.FullName}.{method.Name}: {ex.Message}");
+                                }
+                            }
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(specificClass) && !string.IsNullOrEmpty(specificMethod))
+                    {
+                        await runner.ExecuteMethodAsync(specificClass, specificMethod);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
+                    Environment.Exit(1);
+                }
+            }
+        }
+
+        await Program.Main(args);
         '@
 
-        Set-Content -Path "DynamicCodeRunner/Program.cs" -Value $code
+        Set-Content -Path "CodeRunner/Program.cs" -Value $code
 
-    # Uruchamiamy kod
-    - name: Execute Dynamic Code
+    - name: Run Code Discovery and Execution
       shell: pwsh
       run: |
         $solutionPath = Resolve-Path "AzureMetricsDownloader.sln"
-        $className = "${{ github.event.inputs.className }}"
-        $methodName = "${{ github.event.inputs.methodName }}"
-        $parameters = "${{ github.event.inputs.parameters }}"
+        $executeAll = "${{ github.event.inputs.executeAll }}"
+        $specificClass = "${{ github.event.inputs.specificClass }}"
+        $specificMethod = "${{ github.event.inputs.specificMethod }}"
         
-        cd DynamicCodeRunner
-        dotnet run "$solutionPath" "$className" "$methodName" "$parameters"
+        cd CodeRunner
+        dotnet run "$solutionPath" "$executeAll" "$specificClass" "$specificMethod"
+
+    - name: Upload Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: execution-results
+        path: |
+          CodeRunner/discovered-types.json
+          CodeRunner/*.log
