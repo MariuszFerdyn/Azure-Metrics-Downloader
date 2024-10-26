@@ -11,7 +11,7 @@ jobs:
       - name: Download latest artifact
         uses: actions/download-artifact@v4  # Official GitHub action
         with:
-          name: build-artifacts
+          name: build-artifacts.zip
           path: ./artifacts
           
       - name: Extract artifact
