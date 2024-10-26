@@ -1,0 +1,183 @@
+name: Dynamic Code Execution
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+  workflow_dispatch:
+    inputs:
+      className:
+        description: 'Fully qualified class name to execute'
+        required: true
+        type: string
+      methodName:
+        description: 'Method name to invoke'
+        required: true
+        type: string
+      parameters:
+        description: 'Method parameters (JSON format)'
+        required: false
+        type: string
+
+jobs:
+  build-and-run:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    # Tworzymy projekt wykonawczy
+    - name: Create Runner Project
+      run: |
+        mkdir DynamicCodeRunner
+        cd DynamicCodeRunner
+        dotnet new console
+        dotnet add package Microsoft.CodeAnalysis
+        dotnet add package Microsoft.CodeAnalysis.CSharp
+        dotnet add package Microsoft.CodeAnalysis.Workspaces.MSBuild
+        dotnet add package Microsoft.Build.Locator
+
+    # Tworzymy plik Program.cs z loaderem
+    - name: Create Dynamic Code Runner
+      shell: pwsh
+      run: |
+        $code = @'
+        using Microsoft.CodeAnalysis;
+        using Microsoft.CodeAnalysis.CSharp;
+        using Microsoft.CodeAnalysis.MSBuild;
+        using System.Reflection;
+        using System.Runtime.Loader;
+        using System.Text.Json;
+
+        Microsoft.Build.Locator.MSBuildLocator.RegisterDefaults();
+
+        public class DynamicCodeLoader
+        {
+            private readonly string _solutionPath;
+
+            public DynamicCodeLoader(string solutionPath)
+            {
+                _solutionPath = solutionPath;
+            }
+
+            public async Task<Assembly> LoadAndCompileAsync()
+            {
+                var workspace = MSBuildWorkspace.Create();
+                var solution = await workspace.OpenSolutionAsync(_solutionPath);
+                
+                var allDocuments = solution.Projects
+                    .SelectMany(project => project.Documents)
+                    .Where(doc => doc.Name.EndsWith(".cs"));
+
+                var references = new List<MetadataReference>
+                {
+                    MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                    MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
+                    MetadataReference.CreateFromFile(typeof(System.Runtime.AssemblyTargetedPatchBandAttribute).Assembly.Location),
+                };
+
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+                    {
+                        references.Add(MetadataReference.CreateFromFile(assembly.Location));
+                    }
+                }
+
+                var sourceTrees = new List<SyntaxTree>();
+                foreach (var document in allDocuments)
+                {
+                    var sourceText = await document.GetTextAsync();
+                    var syntaxTree = CSharpSyntaxTree.ParseText(sourceText);
+                    sourceTrees.Add(syntaxTree);
+                }
+
+                var compilation = CSharpCompilation.Create(
+                    Path.GetRandomFileName(),
+                    sourceTrees,
+                    references,
+                    new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+                using var ms = new MemoryStream();
+                var result = compilation.Emit(ms);
+
+                if (!result.Success)
+                {
+                    var failures = result.Diagnostics
+                        .Where(diagnostic => 
+                            diagnostic.IsWarningAsError || 
+                            diagnostic.Severity == DiagnosticSeverity.Error);
+
+                    throw new Exception(
+                        $"Compilation failed:{Environment.NewLine}" +
+                        string.Join(Environment.NewLine, failures.Select(f => $"{f.Id}: {f.GetMessage()}")));
+                }
+
+                ms.Seek(0, SeekOrigin.Begin);
+                var loadContext = new AssemblyLoadContext("DynamicAssembly", isCollectible: true);
+                return loadContext.LoadFromStream(ms);
+            }
+        }
+
+        // Main program
+        async Task Main()
+        {
+            try
+            {
+                var solutionPath = args[0];
+                var className = args[1];
+                var methodName = args[2];
+                var parametersJson = args.Length > 3 ? args[3] : "[]";
+
+                Console.WriteLine($"Loading solution: {solutionPath}");
+                Console.WriteLine($"Class: {className}");
+                Console.WriteLine($"Method: {methodName}");
+                Console.WriteLine($"Parameters: {parametersJson}");
+
+                var loader = new DynamicCodeLoader(solutionPath);
+                var assembly = await loader.LoadAndCompileAsync();
+
+                var type = assembly.GetType(className)
+                    ?? throw new ArgumentException($"Type {className} not found");
+
+                var instance = Activator.CreateInstance(type)
+                    ?? throw new InvalidOperationException($"Could not create instance of {className}");
+
+                var method = type.GetMethod(methodName)
+                    ?? throw new ArgumentException($"Method {methodName} not found");
+
+                var parameters = JsonSerializer.Deserialize<object[]>(parametersJson);
+                var result = method.Invoke(instance, parameters);
+
+                Console.WriteLine($"Execution result: {result}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+                Environment.Exit(1);
+            }
+        }
+
+        await Main();
+        '@
+
+        Set-Content -Path "DynamicCodeRunner/Program.cs" -Value $code
+
+    # Uruchamiamy kod
+    - name: Execute Dynamic Code
+      shell: pwsh
+      run: |
+        $solutionPath = Resolve-Path "AzureMetricsDownloader.sln"
+        $className = "${{ github.event.inputs.className }}"
+        $methodName = "${{ github.event.inputs.methodName }}"
+        $parameters = "${{ github.event.inputs.parameters }}"
+        
+        cd DynamicCodeRunner
+        dotnet run "$solutionPath" "$className" "$methodName" "$parameters"
