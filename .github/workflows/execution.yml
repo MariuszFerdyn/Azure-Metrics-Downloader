@@ -317,10 +317,10 @@ jobs:
         cd CodeRunner
         dotnet run "$solutionPath" "$executeAll" "$specificClass" "$specificMethod"
 
-    - name: Upload Results
-      uses: actions/upload-artifact@v3
-      with:
-        name: execution-results
-        path: |
-          CodeRunner/discovered-types.json
-          CodeRunner/*.log
+#    - name: Upload Results
+#      uses: actions/upload-artifact@v3
+#      with:
+#        name: execution-results
+#        path: |
+#          CodeRunner/discovered-types.json
+#          CodeRunner/*.log
