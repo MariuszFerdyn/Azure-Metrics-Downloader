@@ -1,10 +1,6 @@
 name: Dynamic Code Execution
 
 on:
-  push:
-    branches: [ "main", "develop" ]
-  pull_request:
-    branches: [ "main", "develop" ]
   workflow_dispatch:
     inputs:
       className:
