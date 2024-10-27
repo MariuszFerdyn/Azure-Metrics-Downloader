@@ -8,9 +8,6 @@ jobs:
     runs-on: windows-latest  # Using Windows runner since it's a .NET executable
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
       - name: Download artifact
         id: download-artifact
         uses: dawidd6/action-download-artifact@v2
@@ -20,14 +17,10 @@ jobs:
           path: ./extracted/
           search_artifacts: true
         
-      - name: Set Azure credentials as environment variables
+      - name: Run Azure Metrics Downloader
         env:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-        run: |
-          echo "Azure credentials set"
-
-      - name: Run Azure Metrics Downloader
         run: |
           ./extracted/AzureMetricsDownloader/bin/Release/net8.0/AzureMetricsDownloader.exe
