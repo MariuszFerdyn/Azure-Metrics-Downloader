@@ -19,7 +19,7 @@ jobs:
 
       - name: Extract artifact
         run: |
-          Expand-Archive -Path build-artifacts.zip -DestinationPath ./extracted
+          Expand-Archive -Path ./artifact/build-artifacts.zip -DestinationPath ./extracted
         shell: pwsh
         
       - name: Set Azure credentials as environment variables
@@ -28,9 +28,8 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         run: |
-          echo "Setting Azure credentials as environment variables..."
-          
+          echo "Azure credentials set"
+
       - name: Run Azure Metrics Downloader
         run: |
           ./extracted/AzureMetricsDownloader/bin/Release/net8.0/AzureMetricsDownloader.exe
-        shell: pwsh
