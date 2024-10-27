@@ -5,7 +5,7 @@ on:
 
 jobs:
   download-and-run:
-    runs-on: ubuntu-latest  # Using Windows runner since it's a .NET executable
+    runs-on: windows-latest  # Using Windows runner since it's a .NET executable
 
     steps:
       - name: Checkout repository
