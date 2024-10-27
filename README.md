@@ -23,7 +23,7 @@ e.g.
 AzureMetricsDownloader.exe e9xxx49 Uqxxxxm 42xxxef 0axxx041 sample-app-gateway lpm-t-agw-mf01 TotalRequests export.csv
 ```
 ## Notes
-Do not export more than 10h in one shot, you can loose some logs.
+Do not export more than 10h in one shot, you can lose some logs.
 
 ## Download
 You can Download the Software from Artefact from last successful build: https://github.com/MariuszFerdyn/Azure-Metrics-Downloader/actions/workflows/01-build.yml Just select last green successful build and at the bottom of screen you have artefacts.
@@ -38,4 +38,4 @@ Here is how you can run it automatically in pipeline (GitHub action): https://gi
 It can be useful to automatically run it every hour and export metrics in additional tasks.
 
 ## Future
-If you want to export all Metrics from provided resource please see my other repository named ** Azure-Metrics-Downloader-PowerShell **
+If you want to export all Metrics from provided resource, please see my other repository named ** Azure-Metrics-Downloader-PowerShell **
