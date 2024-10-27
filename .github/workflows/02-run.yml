@@ -24,5 +24,5 @@ jobs:
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         run: |
           # Rem                                                 AzureMetricsDownloader.exe  <<ApplicationId>>               <<Secret>>                          <<TenantId>>                    <<SubscryptionID>>               <<ResourceGroup>>   <<ResourceName>>  <<MetricName>>  <<ExportFilename>>  <<StartDateTime>>  <<StopDateTime>>
-          ./extracted/AzureMetricsDownloader/bin/Release/net8.0/AzureMetricsDownloader.exe  ${{ secrets.AZURE_CLIENT_ID }}  ${{ secrets.AZURE_CLIENT_SECRET }}  ${{ secrets.AZURE_TENANT_ID }}  ${{ secrets.Subscryption_ ID }}  sample-app-gateway  lpm-t-agw-mf01    TotalRequests   export.csv          2024-10-23_11-00   2024-10-23_15-00
+          ./extracted/AzureMetricsDownloader/bin/Release/net8.0/AzureMetricsDownloader.exe  ${{ secrets.AZURE_CLIENT_ID }}  ${{ secrets.AZURE_CLIENT_SECRET }}  ${{ secrets.AZURE_TENANT_ID }}  ${{ secrets.Subscryption_ID }}  sample-app-gateway  lpm-t-agw-mf01    TotalRequests   export.csv          2024-10-23_11-00   2024-10-23_15-00
           
