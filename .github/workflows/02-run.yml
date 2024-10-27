@@ -1,4 +1,4 @@
-name: Run Azure Metrics Downloader
+name: 02 - Run Azure Metrics Downloader
 
 on:
   workflow_dispatch
@@ -13,7 +13,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           name: build-artifacts
-          workflow: build.yml
+          workflow: 01-build.yml
           path: ./extracted/
           search_artifacts: true
         
