@@ -38,4 +38,4 @@ Here is how you can run it automatically in pipeline (GitHub action): https://gi
 It can be useful to automatically run it every hour and export metrics in additional tasks.
 
 ## Future
-If you want to export all Metrics from provided resource, please see my other repository named ** Azure-Metrics-Downloader-PowerShell **
+If you want to export all Metrics from provided resource, please see my other repository named **Azure-Metrics-Downloader-PowerShell**
