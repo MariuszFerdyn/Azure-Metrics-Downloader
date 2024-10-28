@@ -1,4 +1,4 @@
-using Azure.Monitor.Query.Models;
+﻿using Azure.Monitor.Query.Models;
 using Azure.Monitor.Query;
 using System.Text;
 using Azure.Identity;
@@ -13,7 +13,7 @@ namespace AAGMetrics
 
             var sb = new StringBuilder();
             var metricsQueryClient = new MetricsQueryClient(new ClientSecretCredential(arguments.TenantId, arguments.ApplicationId, arguments.Secret));
-            var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceId}/providers/Microsoft.Network/{arguments.ResourceName}";
+            var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceId}/providers/Microsoft.Network/applicationGateways/{arguments.GatewayName}";
             var metrics = new[] { arguments.MetricName };
 
             var results = metricsQueryClient.QueryResourceAsync(
@@ -21,7 +21,7 @@ namespace AAGMetrics
                   metrics,
                   new MetricsQueryOptions()
                   {
-                      Aggregations = { MetricAggregationType.Count },
+                      Aggregations = { MetricAggregationType.Total },
                       //Filter = "EntityName eq '*'",//this is the same as a split in the UI
                       TimeRange = new QueryTimeRange(arguments.StartDate, arguments.EndDate)
                   }
@@ -34,7 +34,7 @@ namespace AAGMetrics
                     foreach (var metricValue in element.Values)
                     {
                         sb.AppendLine(
-                            $"{metricValue.TimeStamp.ToString("yyyy-MM-dd HH:mm")},{metricValue.Count ?? 0}");
+                            $"{metricValue.TimeStamp.ToString("yyyy-MM-dd HH:mm")},{metricValue.Total ?? 0}");
                     }
                 }
             }
@@ -60,7 +60,7 @@ namespace AAGMetrics
             {
                 Console.WriteLine("Could not parse arguments");
 
-                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid> <subscriptionId:guid> <resouceName:string> <wayName:string>  <metricName:string> <exportFileName:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
+                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid> <subscriptionId:guid> <resouceName:string> <gatewayName:string>  <metricName:string> <exportFileName:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
                 Console.WriteLine("Exiting...");
 
                 Environment.Exit(1);
@@ -86,6 +86,6 @@ namespace AAGMetrics
             }
         }
 
-        public record Arguments(string ApplicationId, string Secret, string TenantId, string SubscriptionId, string ResourceId, string ResourceName, string MetricName, string ExportFilename, DateTimeOffset StartDate, DateTimeOffset EndDate);
+        public record Arguments(string ApplicationId, string Secret, string TenantId, string SubscriptionId, string ResourceId, string GatewayName, string MetricName, string ExportFilename, DateTimeOffset StartDate, DateTimeOffset EndDate);
     }
 }
