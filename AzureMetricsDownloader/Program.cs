@@ -13,19 +13,18 @@ namespace AAGMetrics
 
             var sb = new StringBuilder();
             var metricsQueryClient = new MetricsQueryClient(new ClientSecretCredential(arguments.TenantId, arguments.ApplicationId, arguments.Secret));
-            var resourceId = $"{arguments.FullResourceID}";
+            var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/applicationGateways/{arguments.ResourceName}";
             // var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/{arguments.ResourceName}";
-            
+
             var metrics = new[] { arguments.MetricName };
 
-            var agregat = $"{arguments.Agregation}";
 
             var results = metricsQueryClient.QueryResourceAsync(
                   resourceId,
                   metrics,
                   new MetricsQueryOptions()
                   {
-                      Aggregations = { MetricAggregationType.Total },
+                      Aggregations = { GetAggregationByType(arguments.MetricTypeField) },
                       //Filter = "EntityName eq '*'",//this is the same as a split in the UI
                       TimeRange = new QueryTimeRange(arguments.StartDate, arguments.EndDate)
                   }
@@ -38,7 +37,7 @@ namespace AAGMetrics
                     foreach (var metricValue in element.Values)
                     {
                         sb.AppendLine(
-                            $"{metricValue.TimeStamp.ToString("yyyy-MM-dd HH:mm")},{metricValue.Total ?? 0}");
+                            $"{metricValue.TimeStamp.ToString("yyyy-MM-dd HH:mm")},{GetValueByFieldName(metricValue, arguments.MetricTypeField) ?? 0}");
                     }
                 }
             }
@@ -48,13 +47,27 @@ namespace AAGMetrics
             File.WriteAllText(filename, sb.ToString());
         }
 
+        private static object GetValueByFieldName(MetricValue metricValue, string fieldName)
+        {
+            if (fieldName.ToLower() == "total") return metricValue.Total;
+
+            return metricValue.Total;
+        }
+
+        private static MetricAggregationType GetAggregationByType(string metricTypeField)
+        {
+            if (metricTypeField.ToLower() == "total") return MetricAggregationType.Total;
+
+            return MetricAggregationType.Total;
+        }
+
         private static Arguments ParseArguments(string[] args)
         {
             try
             {
                 var now = DateTime.UtcNow;
-                Arguments a = new Arguments(args[0], args[1], args[2], args[3], args[4], args[5], args[6], 
-                    args.Length > 7 ? ParseDateToDateTimeOffset(args[7]) : PreviousHour(now), args.Length > 7 ? ParseDateToDateTimeOffset(args[8]) : PreviousHour(now).AddHours(1));
+                Arguments a = new Arguments(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8],
+args.Length > 9 ? ParseDateToDateTimeOffset(args[9]) : PreviousHour(now), args.Length > 9 ? ParseDateToDateTimeOffset(args[10]) : PreviousHour(now).AddHours(1));
 
                 Console.WriteLine("Using arguments:");
                 Console.WriteLine(a.ToString());
@@ -64,7 +77,8 @@ namespace AAGMetrics
             {
                 Console.WriteLine("Could not parse arguments");
 
-                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid> <FullResourceID:string>  <metricName:string> <Agregation:string> <exportFileName:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
+                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid> <subscriptionId:guid> <resouceName:string> <ResourceName:string>  <metricName:string> <exportFileName:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
+
                 Console.WriteLine("Exiting...");
 
                 Environment.Exit(1);
@@ -89,7 +103,7 @@ namespace AAGMetrics
                 throw;
             }
         }
-
-        public record Arguments(string ApplicationId, string Secret, string TenantId, string FullResourceID, string MetricName, string Agregation ,string ExportFilename, DateTimeOffset StartDate, DateTimeOffset EndDate);
+        
+        public record Arguments(string ApplicationId, string Secret, string TenantId, string SubscriptionId, string ResourceGroup, string ResourceName, string MetricName, string ExportFilename, string MetricTypeField, DateTimeOffset StartDate, DateTimeOffset EndDate);
     }
 }
