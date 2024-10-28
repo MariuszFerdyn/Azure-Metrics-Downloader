@@ -13,7 +13,7 @@ namespace AAGMetrics
 
             var sb = new StringBuilder();
             var metricsQueryClient = new MetricsQueryClient(new ClientSecretCredential(arguments.TenantId, arguments.ApplicationId, arguments.Secret));
-            var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceId}/providers/Microsoft.Network/applicationGateways/{arguments.GatewayName}";
+            var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/applicationGateways/{arguments.ResourceName}";
             var metrics = new[] { arguments.MetricName };
 
             var results = metricsQueryClient.QueryResourceAsync(
@@ -60,7 +60,7 @@ namespace AAGMetrics
             {
                 Console.WriteLine("Could not parse arguments");
 
-                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid> <subscriptionId:guid> <resouceName:string> <gatewayName:string>  <metricName:string> <exportFileName:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
+                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid> <subscriptionId:guid> <resouceName:string> <ResourceName:string>  <metricName:string> <exportFileName:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
                 Console.WriteLine("Exiting...");
 
                 Environment.Exit(1);
@@ -86,6 +86,6 @@ namespace AAGMetrics
             }
         }
 
-        public record Arguments(string ApplicationId, string Secret, string TenantId, string SubscriptionId, string ResourceId, string GatewayName, string MetricName, string ExportFilename, DateTimeOffset StartDate, DateTimeOffset EndDate);
+        public record Arguments(string ApplicationId, string Secret, string TenantId, string SubscriptionId, string ResourceGroup, string ResourceName, string MetricName, string ExportFilename, DateTimeOffset StartDate, DateTimeOffset EndDate);
     }
 }
