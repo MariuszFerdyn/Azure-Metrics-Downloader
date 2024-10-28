@@ -13,8 +13,12 @@ namespace AAGMetrics
 
             var sb = new StringBuilder();
             var metricsQueryClient = new MetricsQueryClient(new ClientSecretCredential(arguments.TenantId, arguments.ApplicationId, arguments.Secret));
-            var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/{arguments.ResourceName}";
+            var resourceId = $"{arguments.FullResourceID}";
+            // var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/{arguments.ResourceName}";
+            
             var metrics = new[] { arguments.MetricName };
+
+            var agregat = $"{arguments.Agregation}";
 
             var results = metricsQueryClient.QueryResourceAsync(
                   resourceId,
@@ -49,8 +53,8 @@ namespace AAGMetrics
             try
             {
                 var now = DateTime.UtcNow;
-                Arguments a = new Arguments(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7],
-                    args.Length > 8 ? ParseDateToDateTimeOffset(args[8]) : PreviousHour(now), args.Length > 8 ? ParseDateToDateTimeOffset(args[9]) : PreviousHour(now).AddHours(1));
+                Arguments a = new Arguments(args[0], args[1], args[2], args[3], args[4], args[5], args[6], 
+                    args.Length > 7 ? ParseDateToDateTimeOffset(args[7]) : PreviousHour(now), args.Length > 7 ? ParseDateToDateTimeOffset(args[8]) : PreviousHour(now).AddHours(1));
 
                 Console.WriteLine("Using arguments:");
                 Console.WriteLine(a.ToString());
@@ -60,7 +64,7 @@ namespace AAGMetrics
             {
                 Console.WriteLine("Could not parse arguments");
 
-                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid> <subscriptionId:guid> <resouceName:string> <ResourceName:string>  <metricName:string> <exportFileName:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
+                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid> <FullResourceID:string>  <metricName:string> <Agregation:string> <exportFileName:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
                 Console.WriteLine("Exiting...");
 
                 Environment.Exit(1);
@@ -86,6 +90,6 @@ namespace AAGMetrics
             }
         }
 
-        public record Arguments(string ApplicationId, string Secret, string TenantId, string SubscriptionId, string ResourceGroup, string ResourceName, string MetricName, string ExportFilename, DateTimeOffset StartDate, DateTimeOffset EndDate);
+        public record Arguments(string ApplicationId, string Secret, string TenantId, string FullResourceID, string MetricName, string Agregation ,string ExportFilename, DateTimeOffset StartDate, DateTimeOffset EndDate);
     }
 }
