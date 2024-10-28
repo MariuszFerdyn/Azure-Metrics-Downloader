@@ -13,7 +13,7 @@ namespace AAGMetrics
 
             var sb = new StringBuilder();
             var metricsQueryClient = new MetricsQueryClient(new ClientSecretCredential(arguments.TenantId, arguments.ApplicationId, arguments.Secret));
-            var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/applicationGateways/{arguments.ResourceName}";
+            var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/{arguments.ResourceName}";
             var metrics = new[] { arguments.MetricName };
 
             var results = metricsQueryClient.QueryResourceAsync(
