@@ -23,7 +23,7 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         run: |
-          # Rem                                                 AzureMetricsDownloader.exe  <<ApplicationId>>               <<Secret>>                          <<TenantId>>                    <<SubscryptionID>>               <<ResourceGroup>>  <<ResourceType/ResourceName>>         <<MetricName>>  <<ExportFilename>>  <<StartDateTime>>  <<StopDateTime>>
-          ./extracted/AzureMetricsDownloader/bin/Release/net8.0/AzureMetricsDownloader.exe  ${{ secrets.AZURE_CLIENT_ID }}  ${{ secrets.AZURE_CLIENT_SECRET }}  ${{ secrets.AZURE_TENANT_ID }}  ${{ secrets.Subscryption_ID }}  sample-app-gateway  applicationGateways/lpm-t-agw-mf01    TotalRequests   export.csv          2024-10-23_11-00   2024-10-23_15-00
+          # Rem                                                 AzureMetricsDownloader.exe  <<ApplicationId>>               <<Secret>>                          <<TenantId>>                    <<FullResourceID>>                                                                                                                                    <<MetricName>>  <<AgregationType>>  <<ExportFilename>>  <<StartDateTime>>  <<StopDateTime>>
+          ./extracted/AzureMetricsDownloader/bin/Release/net8.0/AzureMetricsDownloader.exe  ${{ secrets.AZURE_CLIENT_ID }}  ${{ secrets.AZURE_CLIENT_SECRET }}  ${{ secrets.AZURE_TENANT_ID }}  /subscriptions/0af06968-920a-43d9-9931-cfe593e9a041/resourceGroups/sample-app-gateway/providers/Microsoft.Network/applicationGateways/lpm-t-agw-mf01  TotalRequests   Total               export.csv          2024-10-23_11-00   2024-10-23_15-00
           # Display Results
           Import-Csv ./export.csv | Format-Table 
