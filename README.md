@@ -3,24 +3,24 @@ Azure Resources Metrics are generated automatically and for free stored for 30-9
 
 ## Usage Scenario 1
 ```
-AzureMetricsDownloader.exe <<ApplicationId>> <<Secret>> <<TenantId>> <<SubscryptionID>> <<ResourceGroup>> <<ResourceType/ResourceName>> <<MetricName>> <<ExportFilename>> <<StartDateTime>> <<StopDateTime>>
+AzureMetricsDownloader.exe <<ApplicationId>> <<Secret>> <<TenantId>> <<FullResourceID>> <<MetricName>> <<ExportFilename>> <<Agregation>> <<StartDateTime>> <<StopDateTime>>
 ```
 e.g.
 ```
-AzureMetricsDownloader.exe e9xxx49 Uqxxxxm 42xxxef 0axxx041 sample-app-gateway applicationGateways/lpm-t-agw-mf01 TotalRequests export.csv 2024-10-23_11-00 2024-10-23_15-00
+AzureMetricsDownloader.exe e9xxx49 Uqxxxxm 42xxxef 0axxx041 /subscriptions/xxx/resourceGroups/xxx/providers/Microsoft.Network/applicationGateways/xxx  TotalRequests export.csv Totals 2024-10-23_11-00 2024-10-23_15-00
 ```
 
-This export TotalRequests metric from resource lpm-t-agw-mf01 in sample-app-gateway resource group in 0axxx041 subscription. Time Range 2024-10-23 11:00 to 2024-10-23 15:00. e9xxx49 it is Application ID, with Uqxxxxm Secret in 42xxxef Tenant. Application must have Reader permission on resource that you want export the Metrics.
+This export TotalRequests metric from resource id /subscriptions/xxx/resourceGroups/xxx/providers/Microsoft.Network/applicationGateways/xxx. Time Range 2024-10-23 11:00 to 2024-10-23 15:00. e9xxx49 it is Application ID, with Uqxxxxm Secret in 42xxxef Tenant. Application must have Reader permission on resource that you want export the Metrics. TotalRequests is the metric to gather and Totals is aggregation.
 
 ## Usage Scenario 2
 
 If you skip StartDataTime and StopDataTime it will export last full hour Metrics. If we run it at 11:10 it will export Metric from 10:00:00 to 10:59:59. If we run it 11:59 it will export Metric from 10:00:00 to 10:59:59. It could be useful to continuously export the metric.
 ```
-AzureMetricsDownloader.exe <<ApplicationId>> <<Secret>> <<TenantId>> <<SubscryptionID>> <<ResourceGroup>> <<ResourceType/ResourceName>> <<MetricName>> <<ExportFilename>> <<StartDateTime>> <<StopDateTime>>
+AzureMetricsDownloader.exe <<ApplicationId>> <<Secret>> <<TenantId>> <<FullResourceID>> <<MetricName>> <<ExportFilename>> <<Agregation>>
 ```
 e.g.
 ```
-AzureMetricsDownloader.exe e9xxx49 Uqxxxxm 42xxxef 0axxx041 sample-app-gateway applicationGateways/lpm-t-agw-mf01 TotalRequests export.csv
+AzureMetricsDownloader.exe e9xxx49 Uqxxxxm 42xxxef 0axxx041 /subscriptions/xxx/resourceGroups/xxx/providers/Microsoft.Network/applicationGateways/xxx  TotalRequests export.csv Totals
 ```
 ## Notes
 Do not export more than 10h in one shot, you can lose some logs.
