@@ -13,8 +13,10 @@ namespace AAGMetrics
 
             var sb = new StringBuilder();
             var metricsQueryClient = new MetricsQueryClient(new ClientSecretCredential(arguments.TenantId, arguments.ApplicationId, arguments.Secret));
-            var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/applicationGateways/{arguments.ResourceName}";
+            // var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/applicationGateways/{arguments.ResourceName}";
             // var resourceId = $"/subscriptions/{arguments.SubscriptionId}/resourceGroups/{arguments.ResourceGroup}/providers/Microsoft.Network/{arguments.ResourceName}";
+            var resourceId = $"{arguments.FullResourceID}";
+            
 
             var metrics = new[] { arguments.MetricName };
 
@@ -66,8 +68,8 @@ namespace AAGMetrics
             try
             {
                 var now = DateTime.UtcNow;
-                Arguments a = new Arguments(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8],
-args.Length > 9 ? ParseDateToDateTimeOffset(args[9]) : PreviousHour(now), args.Length > 9 ? ParseDateToDateTimeOffset(args[10]) : PreviousHour(now).AddHours(1));
+                Arguments a = new Arguments(args[0], args[1], args[2], args[3], args[4], args[5], args[6],
+args.Length > 7 ? ParseDateToDateTimeOffset(args[7]) : PreviousHour(now), args.Length > 7 ? ParseDateToDateTimeOffset(args[8]) : PreviousHour(now).AddHours(1));
 
                 Console.WriteLine("Using arguments:");
                 Console.WriteLine(a.ToString());
@@ -77,7 +79,7 @@ args.Length > 9 ? ParseDateToDateTimeOffset(args[9]) : PreviousHour(now), args.L
             {
                 Console.WriteLine("Could not parse arguments");
 
-                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid> <subscriptionId:guid> <resouceName:string> <ResourceName:string>  <metricName:string> <exportFileName:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
+                Console.WriteLine($"Sample usage:{System.AppDomain.CurrentDomain.FriendlyName} <applicationId:guid> <secret:string> <tenantId:guid>  <ResourceName:FullResourceID>  <metricName:string> <exportFileName:string> <MetricTypeField:string> <startDate:YYYY-MM-DD_HH-mm> <endDate:YYYY-MM-DD_HH-mm>");
 
                 Console.WriteLine("Exiting...");
 
@@ -104,6 +106,6 @@ args.Length > 9 ? ParseDateToDateTimeOffset(args[9]) : PreviousHour(now), args.L
             }
         }
         
-        public record Arguments(string ApplicationId, string Secret, string TenantId, string SubscriptionId, string ResourceGroup, string ResourceName, string MetricName, string ExportFilename, string MetricTypeField, DateTimeOffset StartDate, DateTimeOffset EndDate);
+        public record Arguments(string ApplicationId, string Secret, string TenantId, string FullResourceID, string MetricName, string ExportFilename, string MetricTypeField, DateTimeOffset StartDate, DateTimeOffset EndDate);
     }
 }
